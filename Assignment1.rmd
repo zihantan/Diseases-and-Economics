@@ -1,0 +1,69 @@
+---
+title: "Assignment1"
+author: "ZIHAN TAN"
+date: "7/30/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(usmap)
+```
+
+#access data
+```{r}
+df <- read.csv("Rate.csv", header=TRUE)
+```
+
+#Count number of beneficiaries each state
+```{r}
+states <- sort(table(df$StateCode), decreasing = TRUE)
+beneficiary <- sort(table(df$PlanId), decreasing = TRUE)
+states
+```
+#calculate median insurance cost/person each state
+```{r}
+aggregate(df$IndividualRate,list(df$StateCode),median)
+```
+#Calculate mean rate for each state
+```{r}
+aggregate(df$IndividualRate,list(df$StateCode),mean)
+```
+#plot the map
+```{r}
+df_2016 <- subset(df, BusinessYear==2016)
+median_2016 <- aggregate(df_2016$IndividualRate, list(df_2016$StateCode), median)
+colnames(median_2016)[colnames(median_2016)=="Group.1"] <- "state"
+colnames(median_2016)[colnames(median_2016)=="x"] <- "median"
+plot_usmap(data=median_2016, values = "median", labels=TRUE, lines = "black") + scale_fill_continuous(name = "", low = "white", high = "darkblue", label = scales::comma, na.value = 'black') + theme(legend.position = "right")+ggtitle("Median 2016 Health Insurance Plan Individual Premiums ($/month)")
+
+```
+#Why some states are missing 
+#The reason for having missing data can be that some states may not have data for that year. For instance, for Idaho, there is no data in 2016. Moreover, some data can be confidential, which means that, we may not be able to access these data on the table.  
+
+#Compare with stroke 
+```{r}
+stroke<- read.csv("stroke_mortality.csv",header = TRUE)
+stroke2016 = subset(stroke,YEAR==2016)
+colnames(stroke2016)[colnames(stroke2016)=="STATE"] <- "state"
+merge_df <- merge(stroke2016, median_2016, by="state")
+insurance_stroke_corr <- cor.test(x=merge_df$median, y=merge_df$RATE, method = 'spearman')
+insurance_stroke_corr
+```
+## The rho is close to zero. Morover, since the p-value is greater than 0.05, we cannot reject the null hypothesis that is the true rho is equal to 0. The conclusion of the test allows me to conclude that there is no relationship between median insurance rates and stroke death rate.
+
+##Compare with cancer 
+```{r}
+cancer_df = read.csv("USCS_OverviewMap.csv",header = TRUE)
+colnames(cancer_df)[colnames(cancer_df)=="Area"] <- "state"
+cancer_df$state <- state.abb[match(cancer_df$state,state.name)]
+insurance_cancer_df <- merge(cancer_df, median_2016, by="state")
+insurance_cancer_corr <- cor.test(x=insurance_cancer_df$median, y=insurance_cancer_df$AgeAdjustedRate, method = 'spearman')
+insurance_cancer_corr
+```
+# The rho is close to zero. However, the p-value is less than 0.05, we can reject the null hypothesis that the true rho is equal to 0. There is enough evidence to conclude that  the rho is not equal to 0, and there is a positive correlation between medium insurance rates and cancer cases.
