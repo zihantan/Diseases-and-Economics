@@ -1,0 +1,85 @@
+---
+title: "Assignment3"
+author: "ZIHAN TAN"
+date: "8/22/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#library(caret)
+library(Hmisc)
+library(SASxport)
+library(smbinning)
+library(InformationValue)
+library(pROC)
+```
+#read
+```{r}
+data(diabete_df)
+lookup.xport("DIQ_I.XPT")
+diabete_df <- read.xport("DIQ_I.XPT")
+diabete_df$DIQ010[diabete_df$DIQ010!=1]<-0
+
+```
+#use demographic and diatiery information to predict diabettes using logistic regression model
+#combine three df
+```{r}
+data(demo_df)
+lookup.xport("DEMO_I.XPT")
+demo_df <- read.xport("DEMO_I.XPT")
+data(diet_df)
+lookup.xport("DR1TOT_I.XPT")
+diet_df <- read.xport("DR1TOT_I.XPT")
+information <- merge(demo_df, diet_df, by.x = "SEQN", by.y= "SEQN")
+newdiabete <- diabete_df[0:2]
+df <- merge(information,newdiabete, by.x = "SEQN", by.y = "SEQN")
+df$RIAGENDR <- factor(df$RIAGENDR)
+df$RIDRETH1 <- factor(df$RIDRETH1)
+df$DMDEDUC2[is.na(df$DMDEDUC2)]<-0
+df$DMDEDUC2 <- factor(df$DMDEDUC2)
+df$DR1TRET[is.na(df$DR1TRET)]<-0
+df$DR1TVARA[is.na(df$DR1TVARA)]<-0
+df$DR1TACAR[is.na(df$DR1TACAR)]<-0
+df$DR1TLYCO[is.na(df$DR1TLYCO)]<-0
+df$DR1TVB1[is.na(df$DR1TVB1)]<-0
+df$DR1TNIAC[is.na(df$DR1TNIAC)]<-0
+
+TotalDataFrame <- df[,c("DIQ010","RIAGENDR","RIDAGEYR","RIDRETH1","DMDEDUC2","DMDHHSIZ","DR1TRET","DR1TVARA","DR1TACAR","DR1TLYCO","DR1TVB1","DR1TNIAC")]
+
+```
+#randomly split data into training(70%) and testing set (30%)
+```{r}
+dt <- sort(sample(nrow(TotalDataFrame),nrow(TotalDataFrame)*.7))
+train<- TotalDataFrame[dt,]
+test<-TotalDataFrame[-dt,]
+```
+#use demographic and diatiery information to predict diabettes using LR model
+# I used the following dependent variables: race, gender, age in years at screening, education level, household number, retinol, Vitamin A RAE, Alpha-carotene, Lycopene, Thiamin, Niacin.
+```{r}
+logitMod <- glm(DIQ010 ~ RIDAGEYR + DMDHHSIZ + DR1TRET + DR1TVARA + DR1TACAR + DR1TLYCO + DR1TVB1 + DR1TNIAC + RIAGENDR + RIDRETH1 + DMDEDUC2, data=train,family = 'binomial')
+#summary(logitMod)
+predicted <- plogis(predict(logitMod, test))  # predicted scores
+```
+# The following variables: DMDHHSIZ, DR1TRET, DR1TVARA, DR1TACAR, DR1TLYCO, DR1TVB1, DR1TNIAC did not obtain significant p-values which means that our logisitic model could be improved by deleting these variables.
+
+# Measure performance of the LR model using accuracy  ( use 0.5 as threshold), show values
+```{r}
+error <- misClassError(test$DIQ010, predicted, threshold = 0.5)
+accuracy <- 1-error
+print(accuracy)
+```
+#measure performance of the LR model using AUCROC( use library), plot the ROC curve
+```{r}
+library(AUC)
+plotROC(test$DIQ010,predicted)
+```
+#measure performance of the LR model using confusion matrix, print the matrix
+```{r}
+matrix <- confusionMatrix(test$DIQ010, predicted, threshold = 0.5)
+matrix
+```
+
