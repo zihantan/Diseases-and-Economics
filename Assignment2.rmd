@@ -1,0 +1,71 @@
+---
+title: "Assignment2"
+author: "ZIHAN TAN"
+date: "8/11/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#print(.libPaths())
+#install.packages("devtools")
+#devtools::install_github(repo = "stefvanbuuren/mice")
+#.libPaths("/anaconda3/envs/r/lib/R/library")
+#install.packages("mice")
+library(dplyr)
+library(Hmisc)
+library(SASxport)
+library(corpcor)
+library(mice)
+library("corpcor")
+```
+#Extract demographic information, dietary data , Questionnaire data
+#For dietary data, I used "Total Nutrient Intakes, First Day", and for the questionnaire data, I used "Alcohol Use"file.
+```{r}
+data(demo_df)
+lookup.xport("DEMO_I.XPT")
+demo_df <- read.xport("DEMO_I.XPT")
+demo_df<- demo_df[,1:10]
+data(diet_df)
+lookup.xport("DR1TOT_I.XPT")
+diet_df <- read.xport("DR1TOT_I.XPT")
+diet_df<- diet_df[,1:10]
+data(alco_df)
+lookup.xport("ALQ_I.XPT")
+alco_df <- read.xport("ALQ_I.XPT")
+alco_df<- alco_df[,1:10]
+head (alco_df)
+```
+#Find Covarriance matrix, Correlation matrix, and Partial correlation matrix of all the variable 
+```{r}
+merge_df <- merge(demo_df, diet_df,alco_df, by.x = "SEQN", by.y= "SEQN")
+elivars<-names(merge_df) %in% c("sddsrvyr","ridstatr","ridagemn","ridexagm")
+newdata<-merge_df[!elivars]
+#elivars
+#newdata
+imp<-mice(newdata,seed=1234)
+dataset1<- complete(imp,action = 1)
+#standardized
+stand<- scale(dataset1)
+#Covarriance matrix of all the variable 
+#Correlation matrix of all the variable 
+#Partial correlation matrix of all the variable
+cov_matrix <- cov(stand)
+cor_matrix <- scale(cor(stand))
+cor_matrix[is.na(cor_matrix)]<-0
+partial<- cor2pcor(cor_matrix)
+write.csv(cov_matrix,file = "covarriance_matrix.csv")
+write.csv(cor_matrix,file="correlation_matrix.csv")
+write.csv(partial, file = "partial_cor_matrix.csv")
+
+
+```
+
+
+
+
+
+
