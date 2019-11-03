@@ -1,0 +1,35 @@
+---
+title: "assignment7"
+author: "ZIHAN TAN"
+date: "11/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(deepnet)
+library(igraph)
+library(randomForest)
+library(foreign)
+library(Hmisc)
+```
+
+```{r}
+#import data
+diabete_df <- read.xport("DIQ_I.XPT")
+diabete_df$DIQ010[diabete_df$DIQ010 == 1] <-1
+diabete_df$DIQ010[diabete_df$DIQ010 != 1] <- 0 
+#check missing value
+is.na(diabete_df$DIQ010)
+#Using random forest to take care of missing values
+new.df <- rfImpute(diabete_df,diabete_df$DIQ010, iter = 5, ntree = 300)
+new.df<- new.df[,3:54] 
+#Compress to 10 feature in middle level  in autoencoder 
+x<- as.matrix(new.df[,2:52])
+y<- as.vector(new.df[,1])
+dnn <- sae.dnn.train(x,y,hidden = c(10))
+nn.test(dnn,x,y)
+```
+
