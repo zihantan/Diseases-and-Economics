@@ -1,0 +1,45 @@
+---
+title: "random_forest"
+author: "ZIHAN TAN"
+date: "11/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages("randomForest")
+library(randomForest)
+library(foreign)
+library(Hmisc)
+```
+```{r}
+#get data
+#data(diabete_df)
+#lookup.xport("DIQ_I.XPT")
+diabete_df <- read.xport("DIQ_I.XPT")
+diabete_df$DIQ010[diabete_df$DIQ010 == 1] <-1
+diabete_df$DIQ010[diabete_df$DIQ010 != 1] <- 0 
+diabete_df$DIQ010 <- factor(diabete_df$DIQ010,levels = c(0,1),labels = c("NO","YES"))
+#check missing values
+is.na(diabete_df$DIQ010)
+#run random forest model on the data 
+new.df <- rfImpute(diabete_df,diabete_df$DIQ010, iter = 5, ntree = 300)
+new.df<- new.df[,3:54] 
+output.forest <- randomForest(DIQ010~.,data = new.df)
+#show results
+print(output.forest)
+
+#get importance of each feature 
+print(importance(output.forest,type = 2))
+varImpPlot(output.forest,main = 'Top Variable Importance')
+#show top 10 feature 
+importance.data<- data.frame(importance(output.forest,type=2))
+write.csv(importance.data,file="importance.data.csv")
+
+top10.data <-new.df[,c("DIQ010","DIQ175T","DIQ175H","DIQ175X","DIQ175I","DIQ175U","DIQ175S","DIQ175M","DIQ175C","DIQ175Q","DIQ175K")]
+```
+
+
